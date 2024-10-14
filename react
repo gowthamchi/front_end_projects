@@ -1,0 +1,79 @@
+// Example TypeScript/React Component Structure
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import DateRangePicker from './DateRangePicker';
+import ApexCharts from 'apexcharts';
+import './App.css';
+
+const App: React.FC = () => {
+  const [data, setData] = useState<any[]>([]);
+  const [filteredData, setFilteredData] = useState<any[]>([]);
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/data'); // Replace with your API endpoint
+      setData(response.data);
+      setFilteredData(response.data); // Initialize filtered data with all data
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  const handleDateRangeChange = (startDate: Date, endDate: Date) => {
+    setSelectedStartDate(startDate);
+    setSelectedEndDate(endDate);
+    filterData(startDate, endDate);
+  };
+
+  const filterData = (startDate: Date, endDate: Date) => {
+    const filtered = data.filter((item) => {
+      const arrivalDate = new Date(item.arrival_date_year, item.arrival_date_month - 1, item.arrival_date_day_of_month);
+      return arrivalDate >= startDate && arrivalDate <= endDate;
+    });
+    setFilteredData(filtered);
+    updateCharts(filtered);
+  };
+
+  const updateCharts = (filteredData: any[]) => {
+    // Implement chart updates using ApexCharts
+    // Example:
+    const visitorDates = filteredData.map(item => `${item.arrival_date_year}-${item.arrival_date_month}-${item.arrival_date_day_of_month}`);
+    const visitorCounts = filteredData.map(item => item.adults + item.children + item.babies);
+    
+    // Update Time Series Chart
+    new ApexCharts(document.getElementById('time-series-chart'), {
+      // ApexCharts configuration for time series chart
+      series: [{
+        name: 'Visitors',
+        data: visitorCounts
+      }],
+      xaxis: {
+        categories: visitorDates
+      }
+    }).render();
+
+    // Update other charts similarly
+  };
+
+  return (
+    <div className="App">
+      <h1>Hotel Booking Dashboard</h1>
+      <DateRangePicker onDateRangeChange={handleDateRangeChange} />
+      <div className="charts-container">
+        <div id="time-series-chart"></div>
+        <div id="column-chart"></div>
+        <div id="sparkline-chart-adults"></div>
+        <div id="sparkline-chart-children"></div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
